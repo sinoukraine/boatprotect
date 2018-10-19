@@ -67,7 +67,7 @@ function onDeviceReady(){
 
     if (!inBrowser) {
         if(getUserinfo().MinorToken) {
-            //preLogin(); 
+            //login(); 
             preLogin();   
         }
         else {
@@ -136,13 +136,29 @@ function setupPush(){
                         setTimeout(function(){
                             //alert('before processClickOnPushNotification');
                             processClickOnPushNotification([data.additionalData.payload]);
-                            App.hideIndicator();           
+                            App.hideIndicator();     
                         },1000); 
                     }
                 }, 1000); 
             }
+
+            if (device && device.platform && device.platform.toLowerCase() == 'ios') {
+                push.finish(
+                    () => {
+                      console.log('processing of push data is finished');
+                    },
+                    () => {
+                      console.log(
+                        'something went wrong with push.finish for ID =',
+                        data.additionalData.notId
+                      );
+                    },
+                    data.additionalData.notId
+                );
+            }
         });
 
+ 
         if　(!localStorage.ACCOUNT){
             push.clearAllNotifications();
         }
@@ -174,22 +190,27 @@ function backFix(event){
     } 
 }
 
+  
+
 //clear all push messag plus.push.clear();
 //get all push message plus.push.getAllMessage();
 //new_not
 
 // Initialize your app
-var App = new Framework7({   
-    material:true,
-    //pushState: true,
-    sortable: false,         
+var App = new Framework7({      
+    animateNavBackIcon: true,
+    //pushState: true, 
+    //allowDuplicateUrls: true,    
     modalTitle: 'BoatProtect',
-    swipeout: true,   
-    //swipePanel: 'left',
+    notificationTitle: 'BoatProtect',
+    swipeout: true, 
+    swipePanel: 'left',    
     swipeBackPage: false,
     precompileTemplates: true,
-    template7Pages: true,    
-    template7Data: {        
+    template7Pages: true,
+    sortable: false,
+    template7Data: {
+        
     },
     onAjaxStart: function(xhr){
         App.showIndicator();
@@ -207,6 +228,7 @@ var $$ = Dom7;
 // Add view
 var mainView = App.addView('.view-main', {
     domCache: true,  
+    dynamicNavbar: true,
 });
 
 
@@ -222,17 +244,10 @@ var virtualAssetList = null;
 var verifyCheck = {}; // for password reset
 var StreetViewService = null;
 
-var URL_REGISTRATION = "http://app.boatwatch.co/activation/register?";
-var PAYPAL_URL = {};
-PAYPAL_URL.UPGRADELINK1 = "https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=9SFVGM2W2LFZC";  //REAL subscription link
-PAYPAL_URL.UPGRADELINK2 = "https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=UT749QS8G4PLU";     // REAL subscription link
-//PAYPAL_URL.UPGRADELINK1 = "https://www.sandbox.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=2EBSG8RURFP6C";  //suscription TEST link
-//PAYPAL_URL.UPGRADELINK2 = "https://www.sandbox.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=8NT3RAJVGYXRN";  //suscription TEST link
 
 var API_DOMIAN1 = "http://api.m2mglobaltech.com/QuikProtect/V1/Client/";
 var API_DOMIAN2 = "http://quiktrak.co/webapp/QuikProtect/Api2/";
 var API_DOMIAN3 = "http://api.m2mglobaltech.com/QuikTrak/V1/";
-
 var API_URL = {};
 API_URL.URL_GET_LOGIN = API_DOMIAN1 + "Auth?account={0}&password={1}&appKey={2}&mobileToken={3}&deviceToken={4}&deviceType={5}";
 API_URL.URL_GET_LOGOUT = API_DOMIAN1 + "Logoff?MinorToken={0}&deviceToken={1}&mobileToken={2}";
@@ -243,9 +258,7 @@ API_URL.URL_SET_ALARM = API_DOMIAN1 + "AlarmOptions2?MajorToken={0}&MinorToken={
 
 API_URL.URL_EDIT_ACCOUNT = API_DOMIAN1 + "AccountEdit?MajorToken={0}&MinorToken={1}&firstName={2}&surName={3}&mobile={4}&email={5}&address0={6}&address1={7}&address2={8}&address3={9}&address4={10}";
 API_URL.URL_NEW_PASSWORD = API_DOMIAN3 + "User/Password?MinorToken={0}&oldpwd={1}&newpwd={2}";
-//API_URL.URL_SEND_COM_POS = API_DOMIAN2 + "SendPosCommand.json?code={0}&imei={1}&timeZone={2}";
 API_URL.URL_SEND_COM_POS = API_DOMIAN2 + "SendPosCommand2.json?code={0}&imei={1}&timeZone={2}";
-//API_URL.URL_SEND_COM_STATUS = API_DOMIAN2 + "SendStatusCommand.json?code={0}&imei={1}";
 API_URL.URL_SEND_COM_STATUS = API_DOMIAN2 + "SendStatusCommand2.json?code={0}&imei={1}";
 //API_URL.URL_SET_GEOLOCK = API_DOMIAN1 + "SetGeoLock?MajorToken={0}&MinorToken={1}&imei={2}&state={3}";
 API_URL.URL_SET_GEOLOCK = API_DOMIAN1 + "setGeolock?MajorToken={0}&MinorToken={1}&imei={2}&state={3}";
@@ -262,6 +275,7 @@ API_URL.URL_SUPPORT = "http://support.quiktrak.eu/?name={0}&loginName={1}&email=
 
 API_URL.URL_ROUTE = "https://www.google.com/maps/dir/?api=1&destination={0},{1}"; //&travelmode=walking
 API_URL.URL_REFRESH_TOKEN = API_DOMIAN3 + "User/RefreshToken";
+
 
 
 var cameraButtons = [
@@ -288,27 +302,27 @@ var cameraButtons = [
 
 
 
-
 var html = Template7.templates.template_Login_Screen();
 $$(document.body).append(html); 
 //App.loginScreen();
 html = Template7.templates.template_Popover_Menu();
 $$(document.body).append(html);
-html = Template7.templates.template_AssetList();
-$$('.navbar-fixed').append(html);
-/*html = Template7.templates.template_Popover_Notification();
-$$(document.body).append(html);*/
+/*html = Template7.templates.template_AssetList();
+$$('.view-main').prepend(html);*/
+$$('.index-title').html(LANGUAGE.MENU_MSG00);
+$$('.index-search-input').attr('placeholder',LANGUAGE.COM_MSG06);
+$$('.index-search-cancel').html(LANGUAGE.COM_MSG04);
+$$('.index-search-nothing-found').html(LANGUAGE.COM_MSG05);
 
 if (inBrowser) {
-    if(getUserinfo().MinorToken) {
-        preLogin();    
+    if(localStorage.ACCOUNT && localStorage.PASSWORD) {
+        //login();    
+        preLogin();
     }
     else {
         logout();
     } 
 }
-
-
 
 var virtualAssetList = App.virtualList('.assets_list', {
     // search item by item
@@ -324,7 +338,7 @@ var virtualAssetList = App.virtualList('.assets_list', {
     //List of array items
     items: [
     ],
-    height: 88,
+    height: 77,
     // Display the each item using Template7 template parameter
     template: '<li class="item-link item-content item_asset" data-id="{{IMEI}}">' +                
                   '<div class="item-media">{{#if AppPhoto}}<img src="{{AppPhoto}}" alt="">{{else}}<img src="resources/images/svg_asset.svg" alt="">{{/if}} </div>' +
@@ -358,13 +372,11 @@ $$('.login-form').on('submit', function (e) {
     preLogin();
     return false;
 });
-
 $$('body').on('click', '#account, #password', function(e){  
     setTimeout(function(){      
         $('.login-screen-content').scrollTop(200);
     },1000);    
 });
-
 $$('.forgetPwd').on('click', function(){
     App.closeModal();
 });
@@ -383,11 +395,26 @@ $$('body').on('click', '.deleteAllNotifications', function(){
         });
     });
 });
-$$('.button_search').on('click', function(){        
-    $('.searchbar').slideDown(400, function(){
-        $$('.searchbar input').focus();
-    });                
-}); 
+
+/*$$('body').on('click', '.index-title ', function(){
+    //var payload = {};
+    //console.log('')
+    var payload = {
+        "type":"sms_received",
+        "alarm":"location",
+        "imsi":"43688875284305",
+        "AssetName":"Jack Da Roo",
+        "imei":"0352544071889449",
+        "messageReference":"c8e721a6-c549-4aa3-a940-0082bed7e0c5",
+        "state":"received",
+        "Lat":-32.03289,
+        "Lng":115.86833,
+        "positionTime":"2017-02-07T12:17:25",
+        "speed":"0.19",
+        "direct":"0.00"
+    };
+    showMsgNotification([payload]);
+});*/
 
 $$('body').on('click', '.routeButton', function(){
     var that = $$(this);
@@ -409,28 +436,6 @@ $$('body').on('click', '.routeButton', function(){
     
 });
 
-/*$$('body').on('click', '.navbar_title ', function(){
-    //var payload = {};
-    //console.log('')
-    var payload = {
-        "type":"sms_received",
-        "alarm":"location",
-        "imsi":"43688875284305",
-        "AssetName":"Jack Da Roo",
-        "imei":"0352544071889449",
-        "messageReference":"c8e721a6-c549-4aa3-a940-0082bed7e0c5",
-        "state":"received",
-        "Lat":-32.03289,
-        "Lng":115.86833,
-        "positionTime":"2017-02-07T12:17:25",
-        "speed":"0.19",
-        "direct":"0.00"
-    };
-    //plus.push.createMessage("Welcome", payload, {cover:false} );
-    showMsgNotification([payload]);
-});*/
-
-
 $$('body').on('click', '#menu li', function () {
     var id = $$(this).attr('id');
 
@@ -444,7 +449,7 @@ $$('body').on('click', '#menu li', function () {
         case 'menuAddAsset':
             mainView.router.loadPage('resources/templates/asset.add.html');
             break;  
-        case 'menuRecharge':         	         
+        case 'menuRecharge':           
             recharge();
             break;
         case 'menuProfile':           
@@ -527,15 +532,15 @@ $$('.assets_list').on('click', '.item_asset', function(){
     if ((parseInt(asset.StatusNew) & 2) > 0) {        
         immobState = true; 
     }
-  	/*App.alert('hi');*/
     mainView.router.load({
         url:'resources/templates/asset.html',
         context:{
             Name: asset.Name,
             ImgSrc: assetImgSrc,
             IMEI: asset.IMEI,
-            /*Geolock: geolockState, */   
+            /*Geolock: geolockState,  */  
             Credits: userCredits,
+            rcFlag: localStorage.elem_rc_flag,
             Geolock: geolockState,    
             Immob: immobState,
         }
@@ -545,24 +550,18 @@ $$('.assets_list').on('click', '.item_asset', function(){
     
    
 
-/*App.onPageBeforeRemove('notification', function(page){
-	App.params.swipePanel = true;
-});*/
+
 
 App.onPageInit('notification', function(page){
-	//App.params.swipePanel = false;
-    //console.log( );
-    //clearNotificationList();
-    //App.alert('hi');
+    
 	virtualNotificationList = App.virtualList('.notification_list', {    
         //List of array items
         items: [],
         height: 73,
         // Display the each item using Template7 template parameter
         renderItem: function (index, item) {
-            var ret = '';     
-            var time = null;   
-            //alert(JSON.stringify(item));    
+            var ret = '';
+            var time = null;
             switch (item.alarm){
                 case 'Status':
                     if (item.CreateDateTime) {
@@ -586,12 +585,12 @@ App.onPageInit('notification', function(page){
                             '</li>';
                     break;               
                 default:
-                	
-                	if (item.PositionTime) {
-                		time = item.PositionTime;
-                	}else if (item.positionTime){
-                		time = item.positionTime;
-                	}
+                   
+                    if (item.PositionTime) {
+                        time = item.PositionTime;
+                    }else if (item.positionTime){
+                        time = item.positionTime;
+                    }
                     ret = '<li class="swipeout" data-id="'+item.listIndex+'" data-alarm="'+item.alarm+'" data-lat="'+item.Lat+'" data-lng="'+item.Lng+'" data-speed="'+item.Speed+'" data-direct="'+item.Direction+'" data-time="'+time+'" data-imei="'+item.Imei+'" data-name="'+item.AssetName+'" >' +                        
                                 '<div class="swipeout-content item-content">' +
                                     '<div class="item-inner">' +
@@ -611,7 +610,7 @@ App.onPageInit('notification', function(page){
         }
     });
 
-	var user = localStorage["ACCOUNT"];
+	var user = localStorage.ACCOUNT;
     var notList = getNotificationList();                
     //console.log(notList[user]);
     showNotification(notList[user]); 
@@ -660,7 +659,6 @@ App.onPageInit('notification', function(page){
             
         }          
     });
-
 });
 
 
@@ -757,7 +755,7 @@ App.onPageInit('resetPwdNew', function(page) {
 });
 
 App.onPageInit('asset', function(page) {
-    //console.log(page);    
+    //console.log(page);   
     var assetList = getAssetList();
     var asset = assetList[TargetAsset.IMEI];
 
@@ -765,9 +763,7 @@ App.onPageInit('asset', function(page) {
         App.actions(cameraButtons);        
     }); 
     $$('.loadPageAssetEdit').on('click', function () {        
-        assetList = getAssetList();
-        asset = assetList[TargetAsset.IMEI];
-
+       
         var assetImgSrc = getAssetImgSrc(TargetAsset.IMEI);
 
         mainView.router.load({
@@ -784,7 +780,7 @@ App.onPageInit('asset', function(page) {
         });
     });
 
-    $$('.loadPageAssetAlarm').on('click', function () {       
+    $$('.loadPageAssetAlarm').on('click', function () {   
         checkBalanceAndLoadPage('asset.alarm');
     });
 
@@ -804,15 +800,15 @@ App.onPageInit('asset', function(page) {
                 console.log(result);  
                 App.hidePreloader();                  
                 if(result.length > 0 || result.ERROR == "ARREARS"){
-                    showNoCreditMessage(); 
+                   showNoCreditMessage();   
                 }else{ 
                     App.addNotification({
-                        hold: 3000,
+                        hold: 3000,                       
                         message: LANGUAGE.COM_MSG03
                     });
-                    balance();  
+                    balance(); 
                 }
-                
+                 
                 
             }, function(result){                
                 App.hidePreloader();
@@ -832,15 +828,17 @@ App.onPageInit('asset', function(page) {
         
         App.showPreloader();        
         JSON1.request(url, function(result){ 
+            console.log(result);  
                 App.hidePreloader();                 
                 if(result.length > 0 || result.ERROR == "ARREARS"){                       
                     showNoCreditMessage(); 
-                }else{ 
+                }else{                
+                   
                     App.addNotification({
                         hold: 3000,
                         message: LANGUAGE.COM_MSG03
-                    });   
-                    balance();                 
+                    });
+                    balance();
                 }
                 
                 
@@ -869,7 +867,7 @@ App.onPageInit('asset', function(page) {
 
                 if (result.MajorCode == '000') {
                     if (result.MinorCode == '1006') {
-                        showNoCreditMessage(); 
+                        showNoCreditMessage();   
                     }else{
                         App.addNotification({
                             hold: 3000,                       
@@ -880,21 +878,19 @@ App.onPageInit('asset', function(page) {
                         if (updateAsset) {
                             updateAssetList(updateAsset);  
                         }                        
-                        $$('.setGeolockState').toggleClass('disabled');
-                        balance();   
-                    }                         
-                    
-                    
+                        $$('.setGeolockState').toggleClass('disabled');  
+                        balance(); 
+                    }   
                 }else if(result.MajorCode == '100' && result.MinorCode == '1006'){
-                    showNoCreditMessage();  
-                }else if(result.MajorCode == '200' && result.Data && result.Data.ERROR == 'NOT_SUPPORT'){
-                    showModalMessage(TargetAsset.IMEI, LANGUAGE.PROMPT_MSG053);
+                    showNoCreditMessage();   
+                }else if(result.ERROR == "ARREARS"){
+                    showNoCreditMessage();           
                 }else{
                     App.addNotification({
                         hold: 5000,                       
                         message: LANGUAGE.COM_MSG16
-                    });    
-                    balance();                
+                    });   
+                    balance();                 
                 }
                 
                 
@@ -905,7 +901,6 @@ App.onPageInit('asset', function(page) {
         );
 
     });
-    
     
 });
 
@@ -930,12 +925,15 @@ App.onPageInit('asset.edit', function (page) {
                 encodeURIComponent($$(page.container).find('input[name="Describe1"]').val()),
                 encodeURIComponent($$(page.container).find('input[name="Describe2"]').val()),
                 encodeURIComponent($$(page.container).find('input[name="Describe3"]').val()),
-                encodeURIComponent($$(page.container).find('input[name="Describe4"]').val())  
+                encodeURIComponent($$(page.container).find('input[name="Describe4"]').val())
             ); 
         
         JSON1.request(url, function(result){   
         console.log(result);             
-                if (result.MajorCode == '000') {                    
+                if (result.MajorCode == '000') {
+                    if (assetImg.src !== 'resources/images/svg_add_photo_general.svg') {
+                        result.Data.AppPhoto = assetImg.src;
+                    }                        
                     updateAssetList(result.Data);
                     //setAssetImg(assetImg);
                     init_AssetList();                    
@@ -953,17 +951,7 @@ App.onPageInit('asset.edit', function (page) {
 });
 
 App.onPageInit('asset.add', function (page) {  
-    /*var latLng = {};
-    latLng.lat = '50.4091277';
-    latLng.lng = '30.6564239';
-    Helper.getAddressByGeocoder(latLng,function(address){
-        $$('body .address p').html(address);
-        //document.body
-        App.alert(address);
-        console.log(address);
-    });*/
-
-
+   
     $$('.upload_photo, .asset_img img').on('click', function () {        
         App.actions(cameraButtons);        
     }); 
@@ -995,7 +983,8 @@ App.onPageInit('asset.add', function (page) {
         
         JSON1.request(url, function(result){ 
                 console.log(result);               
-                if (result.MajorCode == '000') {                    
+                if (result.MajorCode == '000') {  
+                    asset.AppPhoto = assetImg.src;                    
                     updateAssetList(asset);
                     //setAssetImg(assetImg);
                     init_AssetList();                    
@@ -1014,7 +1003,7 @@ App.onPageInit('asset.alarm', function (page) {
     var alarm = $$(page.container).find('input[name = "checkbox-alarm"]'); 
     var allCheckboxesLabel = $$(page.container).find('label.item-content');
     var allCheckboxes = allCheckboxesLabel.find('input');
-    var alarmFields = ['bilge','power','ignition','geolock'];  
+    var alarmFields = ['bilge','power','ignition','geolock'];
     
 
     alarm.on('change', function(e) { 
@@ -1113,33 +1102,27 @@ App.onPageInit('alarms.assets', function (page) {
             return foundItems; 
         },   
         height: function (item) {
-            return 88;
+            return 44;
         },
         items: newAssetlist,
         renderItem: function (index, item) {
             var ret = '';
-            var assetImg = 'resources/images/svg_asset.svg';  
-            if (item.AppPhoto) {
-                assetImg = item.AppPhoto;  
-            } 
-            ret +=  '<li data-index="'+index+'" >';
-            ret +=      '<label class="label-checkbox item-content no-fastclick">';
-                if (item.Selected) {
+            //var assetImg = getAssetImg(item, {'assetList':true});              
+
+            ret +=  '<li data-index="'+index+'">';
+            ret +=      '<label class="label-checkbox item-content">';
+           // ret +=          '<input type="checkbox" name="alarms-assets" value="" data-imei="' + item.IMEI + '" data-id="' + item.Id + '">';
+            if (item.Selected) {
                     ret +=          '<input type="checkbox" name="alarms-assets" value="" data-imei="' + item.IMEI + '" checked="true" >';
                 }else{
                     ret +=          '<input type="checkbox" name="alarms-assets" value="" data-imei="' + item.IMEI + '" >';
                 }            
-            ret +=          '<div class="item-media"><img src="'+assetImg+'" alt="" /></div>';
+            ret +=          '<div class="item-media"><i class="icon icon-form-checkbox"></i></div>';
             ret +=          '<div class="item-inner">';
-            ret +=              '<div class="item-title-row">';
-            ret +=                  '<div class="item-title">' + item.Name + '</div>';
-            ret +=                  '<div class="item-after">';
-            ret +=                      '<i class="icon icon-form-checkbox"></i>';
-            ret +=                  '</div>';
-            ret +=              '</div>';
+            ret +=              '<div class="item-title ">' + item.Name + '</div>';
             ret +=          '</div>';
             ret +=      '</label>';
-            ret +=  '</li>';            
+            ret +=  '</li>';
             
             return  ret;
         }
@@ -1151,14 +1134,10 @@ App.onPageInit('alarms.assets', function (page) {
         found: '.list-block-search-alarms-assets',
         notFound: '.searchbar-not-found-alarms-assets',
         onDisable: function(s){
-            $(s.container).slideUp();
+            //$(s.container).slideUp();
         }
     });
-
-    $$('.button_search_alarm_assets').on('click', function(){
-        $$('.searchbarAlarmsAssets').addClass('fadeInDown').show();     
-        $$('.searchbarAlarmsAssets input').focus();
-    });
+    
     
     var SelectAll = $$(page.container).find('input[name="select-all"]');
 
@@ -1190,6 +1169,8 @@ App.onPageInit('alarms.assets', function (page) {
                 assets.push(value.IMEI);
             }               
         });
+
+        //console.log(assets);
         
         if (assets.length > 0) {
 
@@ -1216,7 +1197,7 @@ App.onPageInit('alarms.select', function (page) {
     var allCheckboxesLabel = $$(page.container).find('label.item-content');
     var allCheckboxes = allCheckboxesLabel.find('input');
     var assets = $$(page.container).find('input[name="Assets"]').val();
-    var alarmFields = ['bilge','power','ignition','geolock'];     
+    var alarmFields = ['bilge','power','ignition','geolock'];    
 
     alarm.on('change', function(e) { 
         if( $$(this).prop('checked') ){
@@ -1287,10 +1268,9 @@ App.onPageInit('alarms.select', function (page) {
 
 });
 
+
 App.onPageInit('profile', function (page) {  
-    //var mobileToken = !localStorage["PUSH_MOBILE_TOKEN"]? '123' : localStorage["PUSH_MOBILE_TOKEN"];
-	//var deviceToken = !localStorage["PUSH_DEVICE_TOKEN"]? '123' : localStorage["PUSH_DEVICE_TOKEN"];
-	//App.alert('mobileToken: '+mobileToken+', deviceToken: '+deviceToken);
+    
     $$('.saveProfile').on('click', function(e){
         var user = {
             FirstName: $$(page.container).find('input[name="FirstName"]').val(),
@@ -1350,11 +1330,6 @@ App.onPageInit('profile', function (page) {
             function(){ App.hidePreloader(); App.alert(LANGUAGE.COM_MSG02); }
         ); 
     });
-
-    
-
-
-    
 });
 
 App.onPageInit('profile.newPwd', function (page) { 
@@ -1369,7 +1344,7 @@ App.onPageInit('profile.newPwd', function (page) {
                 var userInfo = getUserinfo(); 
                 var url = API_URL.URL_NEW_PASSWORD.format(userInfo.MinorToken,
                         encodeURIComponent(password.old),
-                        encodeURIComponent(password.new)                          
+                        encodeURIComponent(password.new)                        
                     ); 
                 //console.log(url);
                 App.showPreloader();
@@ -1566,7 +1541,7 @@ App.onPageInit('asset.edit.photo', function (page) {
     });
 });
 
-App.onPageInit('upgrade', function (page) {  
+/*App.onPageInit('upgrade', function (page) {  
     var upgradeButton = $$(page.container).find('.buttonUpgrade');
     
     upgradeButton.on('click', function(){
@@ -1610,7 +1585,7 @@ App.onPageInit('upgrade', function (page) {
         }); 
         
     });
-});
+});*/
 
 
 
@@ -1620,7 +1595,9 @@ function clearUserInfo(){
     var deviceToken = !localStorage.PUSH_DEVICE_TOKEN ? '' : localStorage.PUSH_DEVICE_TOKEN;
     var mobileToken = !localStorage.PUSH_MOBILE_TOKEN? '' : localStorage.PUSH_MOBILE_TOKEN;
     var MinorToken = getUserinfo().MinorToken;
-    var userName = !localStorage.ACCOUNT? '' : localStorage.ACCOUNT;      
+    var userName = !localStorage.ACCOUNT? '' : localStorage.ACCOUNT;     
+
+    var elem_rc_flag = !localStorage.elem_rc_flag ? '' : localStorage.elem_rc_flag; 
     
     var alarmList = getAlarmList();
     var assetImgList = getAssetImgList();
@@ -1655,6 +1632,10 @@ function clearUserInfo(){
     if (mobileToken) {
         localStorage.PUSH_MOBILE_TOKEN = mobileToken;
     }
+
+    if (elem_rc_flag) {
+        localStorage.elem_rc_flag = 1;
+    }
     
 
     JSON1.request(API_URL.URL_GET_LOGOUT.format(MinorToken, deviceToken, mobileToken), function(result){
@@ -1663,7 +1644,8 @@ function clearUserInfo(){
     $$("input[name='account']").val(userName); 
 }
 
-function logout(){  
+function logout(){ 
+    //alert('logout'); 
     clearUserInfo();
     App.loginScreen();   
 }
@@ -1697,21 +1679,23 @@ function reGetPushDetails(){
     }           
 }
 
-function login(){    
+function login(){  
+    //alert('inBrowser: '+inBrowser);  
     getPlusInfo();
+
     //hideKeyboard();
     //alert('login called');
     
     //App.showPreloader();
-    var mobileToken = !localStorage["PUSH_MOBILE_TOKEN"]? '111' : localStorage["PUSH_MOBILE_TOKEN"];
-    var appKey = !localStorage["PUSH_APP_KEY"]? '111' : localStorage["PUSH_APP_KEY"];
-    var deviceToken = !localStorage["PUSH_DEVICE_TOKEN"]? '111' : localStorage["PUSH_DEVICE_TOKEN"];
-    var deviceType = !localStorage["DEVICE_TYPE"]? 'web' : localStorage["DEVICE_TYPE"];
+    var mobileToken = !localStorage.PUSH_MOBILE_TOKEN ? '111' : localStorage.PUSH_MOBILE_TOKEN;
+    var appKey = !localStorage.PUSH_APP_KEY ? '111' : localStorage.PUSH_APP_KEY;
+    var deviceToken = !localStorage.PUSH_DEVICE_TOKEN ? '111' : localStorage.PUSH_DEVICE_TOKEN;
+    var deviceType = !localStorage.DEVICE_TYPE ? 'web' : localStorage.DEVICE_TYPE;
     var account = $$("input[name='account']");
     var password = $$("input[name='password']"); 
     
-    var urlLogin = API_URL.URL_GET_LOGIN.format(!account.val()? localStorage["ACCOUNT"]: account.val()
-                                     , encodeURIComponent(!password.val()? localStorage["PASSWORD"]: password.val())
+    var urlLogin = API_URL.URL_GET_LOGIN.format(!account.val() ? localStorage.ACCOUNT : account.val()
+                                     , encodeURIComponent(!password.val() ? localStorage.PASSWORD : password.val())
                                      , appKey
                                      , mobileToken
                                      , encodeURIComponent(deviceToken) 
@@ -1720,10 +1704,13 @@ function login(){
     JSON1.request(urlLogin, function(result){
             App.hidePreloader();     
             console.log(result);      
-            if(result.MajorCode == '000') {               
-                if(!!account.val()) {
-                    localStorage["ACCOUNT"] = account.val();
-                    localStorage["PASSWORD"] = password.val();
+            if(result.MajorCode == '000') {
+                if (result.Data.elemRc) {
+                    localStorage.elem_rc_flag = 1;
+                }
+                if(account.val()) {
+                    localStorage.ACCOUNT = account.val();
+                    localStorage.PASSWORD = password.val();
                 }
                 account.val(null);
                 password.val(null);
@@ -1731,11 +1718,11 @@ function login(){
                 setAssetList(result.Data.AssetArray);
                 updateUserCrefits(result.Data.UserInfo.SMSTimes);
 
-                /*if (parseInt(result.Data.UserInfo.SMSTimes) < 3) {
-                    setTimeout( function(){
-                        showMsgLowBalance(result.Data.UserInfo.SMSTimes);
-                    },5000);
-                }*/
+                
+                /*setTimeout( function(){
+                    checkIsBalanceLow(result.Data.UserInfo.SMSTimes);
+                },5000);*/
+               
                 
                 init_AssetList(); 
                 initSearchbar();  
@@ -1743,15 +1730,20 @@ function login(){
                 
                 getNewNotifications();
                 App.closeModal();
+
+                //console.log(localStorage['COM.QUIKTRAK.LIVE.GEOLOCKLIST']);
                 //alert(urlLogin);
-                //App.alert('mobileToken: '+mobileToken+', appKey: '+appKey+', deviceToken: '+deviceToken+', deviceType: '+deviceType);
+                //alert('mobileToken: '+mobileToken+', appKey: '+appKey+', deviceToken: '+deviceToken);
+
+
             }else {
                 App.alert(LANGUAGE.LOGIN_MSG01, function(){
                     //clearUserInfo();
                 });
+                App.loginScreen(); 
             }
         },
-        function(){ App.hidePreloader(); App.alert(LANGUAGE.COM_MSG02); }
+        function(){ App.hidePreloader(); App.alert(LANGUAGE.COM_MSG02);App.loginScreen();  }
     ); 
    
 }
@@ -1815,7 +1807,6 @@ function hideKeyboard() {
     $$("input").blur();
 }
 
-
 function init_AssetList() {
     var assetList = getAssetList(); 
     
@@ -1832,16 +1823,12 @@ function init_AssetList() {
     });
     
     returnToIndex();
-   
+    
     virtualAssetList.replaceAllItems(newAssetlist);
     
 
-    /*var mobileToken = !localStorage["PUSH_MOBILE_TOKEN"]? '123' : localStorage["PUSH_MOBILE_TOKEN"];
-    var appKey = !localStorage["PUSH_APPID_ID"]? 'RpOT2oi37K69qGaSyxDtu8' : localStorage["PUSH_APPID_ID"];
-    var deviceToken = !localStorage["PUSH_DEVICE_TOKEN"]? '123' : localStorage["PUSH_DEVICE_TOKEN"];
-    var deviceType = !localStorage["DEVICE_TYPE"]? 'android' : localStorage["DEVICE_TYPE"];
-   	alert('mobileToken: '+mobileToken+', appKey: '+appKey+', deviceToken: '+deviceToken+', deviceType: '+deviceType);*/
-   	//console.log('mobileToken: '+mobileToken+', appKey: '+appKey+', deviceToken: '+deviceToken+', deviceType: '+deviceType);
+    initExtend();
+   
 }
 
 function returnToIndex(){
@@ -1849,53 +1836,6 @@ function returnToIndex(){
       pageName: 'index',
       force: true
     });
-}
-
-function checkIsBalanceLow(val) {
-
-    if (val < 6 ) {
-        var modalTex = '<div class="color-red custom-modal-title">'+ LANGUAGE.PROMPT_MSG025 +'</div>' +
-                        '<div class="custom-modal-text">'+ LANGUAGE.PROMPT_MSG024 +'</div>' +
-                        '<div class="custom-modal-text">'+ LANGUAGE.PROMPT_MSG026 +'</div>' +
-                        '<div class="remaining_wrapper custom-modal-remaining">' +
-                            '<p>'+ LANGUAGE.COM_MSG01 + ': <span class="user_credits">' + val + '</span></p>' +
-                        '</div>';
-
-        switch (true){
-            /*case ( val > 1 && val < 6 ):
-                modalTex = '<div class="color-red custom-modal-title">'+ LANGUAGE.PROMPT_MSG025 +'</div>' +
-                            '<div class="custom-modal-text">'+ LANGUAGE.PROMPT_MSG024 +'</div>' +
-                            '<div class="custom-modal-text">'+ LANGUAGE.PROMPT_MSG026 +'</div>' +
-                            '<div class="remaining_wrapper custom-modal-remaining">' +
-                                '<p>'+ LANGUAGE.COM_MSG01 + ': <span class="user_credits">' + val + '</span></p>' +
-                            '</div>';
-                break;*/
-            case ( val < 2 ):
-                modalTex = '<div class="color-red custom-modal-title">'+ LANGUAGE.PROMPT_MSG027 +'</div>' +
-                            '<div class="custom-modal-text">'+ LANGUAGE.PROMPT_MSG028 +'</div>' +
-                            '<div class="custom-modal-text">'+ LANGUAGE.PROMPT_MSG026 +'</div>';
-                break;
-
-        }
-        
-        App.modal({
-               title: '<img class="custom-modal-logo" src="resources/images/login_logo.png" alt=""/>',
-                text: modalTex,
-           
-             buttons: [
-                {
-                    text: LANGUAGE.COM_MSG20
-                },
-                {
-                    text: LANGUAGE.COM_MSG19,
-                    //bold: true,
-                    onClick: function () {
-                        recharge();  
-                    }
-                },
-            ]
-        });
-    }    
 }
 
 function profile(){
@@ -1975,14 +1915,14 @@ function recharge(){
             buttonCur: buttonCur
         },
 
-    });           
+    });         
 }
 
-function upgrade(planTime){
+/*function upgrade(planTime){
     var userInfo = getUserinfo();
-    var href = PAYPAL_URL.UPGRADELINK1 + '&on0=IMEI&os0=' + TargetAsset.IMEI + '&on1=MajorToken&os1=' + userInfo.MajorToken + '&on2=MinorToken&os2=' + userInfo.MinorToken + '&on3=ProjectNumber&os3=4';
+    var href = PAYPAL_URL.UPGRADELINK1 + '&on0=IMEI&os0=' + TargetAsset.IMEI + '&on1=MajorToken&os1=' + userInfo.MajorToken + '&on2=MinorToken&os2=' + userInfo.MinorToken;
     if (planTime == '2') {
-        href = PAYPAL_URL.UPGRADELINK2 + '&on0=IMEI&os0=' + TargetAsset.IMEI + '&on1=MajorToken&os1=' + userInfo.MajorToken + '&on2=MinorToken&os2=' + userInfo.MinorToken + '&on3=ProjectNumber&os3=4';
+        href = PAYPAL_URL.UPGRADELINK2 + '&on0=IMEI&os0=' + TargetAsset.IMEI + '&on1=MajorToken&os1=' + userInfo.MajorToken + '&on2=MinorToken&os2=' + userInfo.MinorToken;
     }
    
     if (typeof navigator !== "undefined" && navigator.app) {
@@ -1995,7 +1935,7 @@ function upgrade(planTime){
         App.alert(LANGUAGE.PROMPT_MSG013);
     }, 2000);
 
-}
+}*/
 
 function loadPositionPage(params){
 
@@ -2104,7 +2044,7 @@ function showMap(params){
 }
 
 function setAssetList(list){    
-    //localStorage.setItem("COM.QUIKTRAK.LIVE.ASSETLIST", JSON.stringify(list));    
+    
     var ary = {};    
     for(var i = 0; i < list.length; i++) {     
         ary[list[i]["IMEI"]] = {                      
@@ -2132,19 +2072,6 @@ function updateAssetList(asset){
 }
 function getAssetList(){
     var ret = null;var str = localStorage.getItem("COM.QUIKTRAK.LIVE.ASSETLIST");if(str){ret = JSON.parse(str);}return ret;
-}
-
-function updateAlarmOptVal(alarmOptions) {
-    var IMEIList = alarmOptions.IMEI.split(','); 
-    var assetList = getAssetList();    
-   
-    if (IMEIList) {        
-        $.each(IMEIList, function(index, value){            
-            assetList[value].AlarmOptions = alarmOptions.options;           
-        });
-    }    
-   
-    localStorage.setItem("COM.QUIKTRAK.LIVE.ASSETLIST", JSON.stringify(assetList));
 }
 
 function setAlarmList(options){
@@ -2203,6 +2130,19 @@ function getGeolockList(){
     var ret = null;var str = localStorage.getItem("COM.QUIKTRAK.LIVE.GEOLOCKLIST");if(str){ret = JSON.parse(str);}return ret;
 }
 
+function updateAlarmOptVal(alarmOptions) {
+    var IMEIList = alarmOptions.IMEI.split(','); 
+    var assetList = getAssetList();    
+   
+    if (IMEIList) {        
+        $.each(IMEIList, function(index, value){            
+            assetList[value].AlarmOptions = alarmOptions.options;           
+        });
+    }    
+   
+    localStorage.setItem("COM.QUIKTRAK.LIVE.ASSETLIST", JSON.stringify(assetList));
+}
+
 function checkBalanceAndLoadPage(pageName){
     if (pageName) {
         var userInfo = getUserinfo(); 
@@ -2239,7 +2179,7 @@ function showNoCreditMessage(){
     var modalTex = '<div class="color-red custom-modal-title">'+ LANGUAGE.PROMPT_MSG027 +'</div>' +
                     '<div class="custom-modal-text">'+ LANGUAGE.PROMPT_MSG004 +'</div>';                            
     App.modal({
-           title: '<img class="custom-modal-logo" src="resources/images/login_logo.png" alt=""/>',
+           title: '<img class="custom-modal-logo" src="resources/images/menu_logo.png" alt=""/>',
             text: modalTex,                                
          buttons: [
             {
@@ -2254,21 +2194,6 @@ function showNoCreditMessage(){
             },
         ]
     });             
-}
-
-function showModalMessage(header, body){
-    var modalTex = '<div class="color-red custom-modal-title">'+ header +'</div>' +
-                    '<div class="custom-modal-text">'+ body +'</div>';                            
-    App.modal({
-           title: '<img class="custom-modal-logo" src="resources/images/login_logo.png" alt=""/>',
-            text: modalTex,                                
-         buttons: [
-            {
-                text: LANGUAGE.COM_MSG31
-            },
-            
-        ]
-    });          
 }
 
 function loadPageAssetAlarm(){
@@ -2316,7 +2241,7 @@ function loadPageAssetAlarm(){
             Bilge: alarms.bilge.state,
             Power: alarms.power.state,
             Ignition: alarms.ignition.state,                
-            Geolock: alarms.geolock.state,                
+            Geolock: alarms.geolock.state,
         }
     });
 }
@@ -2387,7 +2312,9 @@ function getNewNotifications(params){
                 if (params && params.ptr === true) {
                     App.pullToRefreshDone();
                 }
-              
+                if(window.plus) {
+                    plus.push.clear();
+                }
                 
                 console.log(result);                       
                 if (result.MajorCode == '000') {
@@ -2785,16 +2712,59 @@ function showMsgNotification(arrMsgJ){
         }  
     }     
 }
+function checkIsBalanceLow(val) {   
+    if (val < 6 ) {
+        var modalTex = '<div class="color-red custom-modal-title">'+ LANGUAGE.PROMPT_MSG025 +'</div>' +
+                        '<div class="custom-modal-text">'+ LANGUAGE.PROMPT_MSG024 +'</div>' +
+                        '<div class="custom-modal-text">'+ LANGUAGE.PROMPT_MSG026 +'</div>' +
+                        '<div class="remaining_wrapper custom-modal-remaining">' +
+                            '<p>'+ LANGUAGE.COM_MSG01 + ': <span class="user_credits">' + val + '</span></p>' +
+                        '</div>';
+
+        switch (true){
+            /*case ( val > 1 && val < 6 ):
+                modalTex = '<div class="color-red custom-modal-title">'+ LANGUAGE.PROMPT_MSG025 +'</div>' +
+                            '<div class="custom-modal-text">'+ LANGUAGE.PROMPT_MSG024 +'</div>' +
+                            '<div class="custom-modal-text">'+ LANGUAGE.PROMPT_MSG026 +'</div>' +
+                            '<div class="remaining_wrapper custom-modal-remaining">' +
+                                '<p>'+ LANGUAGE.COM_MSG01 + ': <span class="user_credits">' + val + '</span></p>' +
+                            '</div>';
+                break;*/
+            case ( val < 2 ):
+                modalTex = '<div class="color-red custom-modal-title">'+ LANGUAGE.PROMPT_MSG027 +'</div>' +
+                            '<div class="custom-modal-text">'+ LANGUAGE.PROMPT_MSG028 +'</div>' +
+                            '<div class="custom-modal-text">'+ LANGUAGE.PROMPT_MSG026 +'</div>';
+                break;
+
+        }
+        
+        App.modal({
+               title: '<img class="custom-modal-logo" src="resources/images/menu_logo.png" alt=""/>',
+                text: modalTex,
+           
+             buttons: [
+                {
+                    text: LANGUAGE.COM_MSG20
+                },
+                {
+                    text: LANGUAGE.COM_MSG19,
+                    //bold: true,
+                    onClick: function () {
+                        recharge();  
+                    }
+                },
+            ]
+        });
+    }    
+}
 
 function updateUserCrefits(credits){
     $$('body .user_credits').html(credits);
 
     setTimeout(function() {
         checkIsBalanceLow(credits);
-    }, 1000); 
+    }, 1000);
 }
-
-
 
 function balance(){
     var userInfo = getUserinfo(); 
@@ -2807,7 +2777,7 @@ function balance(){
                 setUserinfo(userInfo); 
                 //$$('body .user_credits').html(result.Data.SMSTimes);
                 updateUserCrefits(result.Data.SMSTimes);
-                /*if (parseInt(result.Data.SMSTimes) == 1 || parseInt(result.Data.SMSTimes) == 2) {                 
+                /*if (parseInt(result.Data.SMSTimes) == 1 || parseInt(result.Data.SMSTimes) == 2) {       
                     showMsgLowBalance(result.Data.SMSTimes);                    
                 }*/
             }
@@ -2826,7 +2796,7 @@ function afterRechergeCredits(){
                 userInfo.UserInfo.SMSTimes = result.Data.SMSTimes;  
                 setUserinfo(userInfo); 
                 //$$('body .user_credits').html(result.Data.SMSTimes);
-                updateUserCrefits(result.Data.SMSTimes);
+                checkIsBalanceLow(result.Data.SMSTimes);
                 var text = 'Your Remaining: '+result.Data.SMSTimes;
                 App.alert(text);
             }
@@ -2837,6 +2807,32 @@ function afterRechergeCredits(){
 }
 
 
+var elem_rc = '<li class="item-content list-panel-all close-panel item-link" id="menuRecharge" style="display:none;">' +
+                '<div class="item-media">' +
+                  '<i class="icon icon-recharge"></i>' +
+                '</div>' +
+                '<div class="item-inner">' +
+                  '<div class="item-title">'+LANGUAGE.MENU_MSG02+'</div>' +
+                '</div>' +
+              '</li>';
+$$(elem_rc).insertAfter('#menuAddAsset');
+
+var elem_remaining =    '<div class="menu_remaining" style="display:none;">' +
+                            '<div class="content-divider"></div>' +
+                            '<div class="content-block remaining_wrapper" >' +
+                              '<p>'+LANGUAGE.COM_MSG01+': <span class="user_credits">999</span></p>' +
+                            '</div>' +
+                        '</div>';
+$$(elem_remaining).insertAfter('#menu');
+
+function initExtend(){ 
+    if ($$("#menuRecharge").length != 0 && localStorage.elem_rc_flag) {
+        $$('body').find('#menuRecharge').css('display', 'flex');
+    }    
+    if ($$(".menu_remaining").length != 0 && localStorage.elem_rc_flag) {
+        $$('body').find('.menu_remaining').css('display', 'block');
+    }  
+}
 
 function initSearchbar(){    
     if (searchbar) {        
@@ -2847,9 +2843,9 @@ function initSearchbar(){
         searchIn: '.item-title',
         found: '.searchbar-found',
         notFound: '.searchbar-not-found',
-        onDisable: function(s){
+        /*onDisable: function(s){
             $(s.container).slideUp();
-        }
+        }*/
     });
 }
 
@@ -2941,3 +2937,4 @@ function getImage(source){
     }
            
 }
+
