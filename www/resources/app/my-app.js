@@ -60,6 +60,9 @@ function onDeviceReady(){
     if (window.MobileAccessibility) {
         window.MobileAccessibility.usePreferredTextZoom(false);    
     }
+    if (StatusBar) {
+        StatusBar.styleDefault();
+    } 
 
     setupPush();
 
